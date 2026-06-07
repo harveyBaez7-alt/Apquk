@@ -1,1 +1,45 @@
+name: Compilar APK con Buildozer
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar Entorno Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias del sistema Linux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev python3-pip python3-setuptools
+        pip3 install --user --upgrade buildozer Cython==0.29.33 virtualenv
+
+    - name: Compilar APK con Inyección de Licencias
+      run: |
+        export PATH=$PATH:$HOME/.local/bin
+        
+        # 1. Arrancamos Buildozer un segundo para que cree las carpetas del SDK de forma nativa
+        buildozer android debug || true
+        
+        # 2. Ahora que las carpetas reales existen, inyectamos las licencias en la ruta correcta
+        mkdir -p $HOME/.buildozer/android/platform/android-sdk/licenses
+        echo -e "\n893345c77e356bab219747521128533d115291f4" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-license
+        echo -e "\n24333f8a63b6825ea9c5514f83c2829b004d1fee" > $HOME/.buildozer/android/platform/android-sdk/licenses/android-sdk-preview-license
+        
+        # 3. Lanzamos la compilación real con todo en su sitio
+        buildozer android debug
+        
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Debug
+        path: bin/*.apk
