@@ -1,1 +1,64 @@
-t
+name: Compilar APK con Python-for-Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar Python Estable
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Configurar Entorno Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias del sistema Linux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev libffi-dev libssl-dev
+
+    - name: Configurar Entorno Virtual Aislado y Herramientas
+      run: |
+        # Creamos un entorno virtual estricto para asegurar que el sistema use Python 3.11 globalmente
+        python -m venv venv
+        source venv/bin/activate
+        python -m pip install --upgrade pip
+        python -m pip install wheel setuptools Cython==0.29.33 python-for-android pillow
+
+    - name: Compilar APK Directamente con P4A (Sin Buildozer)
+      run: |
+        # Activamos nuestro entorno virtual para unificar hostpython3 con python3 (API 3.11)
+        source venv/bin/activate
+        
+        # Mantenemos intacta la configuración del SDK nativo que ya dominamos
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        export ANDROID_NDK_ROOT=$ANDROID_NDK_LATEST_HOME
+        
+        p4a apk \
+          --private . \
+          --package=org.cyberpunk.neolauncherar \
+          --name="NeoLauncherAR" \
+          --version=1.0 \
+          --bootstrap=sdl2 \
+          --requirements=python3==3.11,kivy==2.3.0,kivymd==1.1.1,pyjnius,pillow \
+          --arch=arm64-v8a \
+          --android-api=34 \
+          --permission=CAMERA \
+          --permission=BODY_SENSORS \
+          --release
+
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Nativo
+        path: "*.apk"
