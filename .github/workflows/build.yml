@@ -1,1 +1,59 @@
-e
+name: Compilar APK con Python-for-Android
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+
+    # FORZAMOS AL ENTORNO A USAR PYTHON ESTABLE (3.11)
+    - name: Configurar Python Estable
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Configurar Entorno Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias del sistema Linux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev libffi-dev libssl-dev
+
+    - name: Instalar herramientas de Python (Sin tocar entornos experimentales)
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install wheel setuptools Cython==0.29.33 virtualenv python-for-android pillow
+
+    - name: Compilar APK Directamente con P4A (Sin Buildozer)
+      run: |
+        # Forzamos el uso de las herramientas locales de GitHub
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        export ANDROID_NDK_ROOT=$ANDROID_NDK_LATEST_HOME
+        
+        p4a apk \
+          --private . \
+          --package=org.cyberpunk.neolauncherar \
+          --name="NeoLauncherAR" \
+          --version=1.0 \
+          --bootstrap=sdl2 \
+          --requirements=python3==3.11,kivy==2.3.0,kivymd==1.1.1,pyjnius,pillow \
+          --arch=arm64-v8a \
+          --android-api=34 \
+          --permission=CAMERA \
+          --permission=BODY_SENSORS \
+          --release
+
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Nativo
+        path: "*.apk"
