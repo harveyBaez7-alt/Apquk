@@ -1,1 +1,71 @@
-go
+name: Compilar APK con Python-for-Android Local
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Configurar Java
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq git zip unzip autoconf automake libtool pkg-config zlib1g-dev libffi-dev libssl-dev
+
+    - name: Preparar NDK 25b
+      run: |
+        wget -q https://dl.google.com/android/repository/android-ndk-r25b-linux.zip
+        unzip -q android-ndk-r25b-linux.zip
+        echo "MY_NDK_PATH=$GITHUB_WORKSPACE/android-ndk-r25b" >> $GITHUB_ENV
+
+    # INSTALACIÓN TARDÍA: Instalamos P4A aquí para asegurarnos de que detecte todo
+    - name: Instalar P4A
+      run: |
+        python3 -m pip install --upgrade pip
+        python3 -m pip install wheel setuptools Cython==0.29.33 python-for-android==2024.1.21
+
+    - name: Compilar APK (Perlita V4)
+      env:
+        PIP_NO_BUILD_ISOLATION: "false"
+        P4A_NO_BUILD_ISOLATION: "1"
+      run: |
+        export ANDROID_SDK_ROOT=$ANDROID_HOME
+        export ANDROID_NDK_ROOT=$MY_NDK_PATH
+        export P4A_hostpython=$(which python3)
+        export CFLAGS="-Wno-error=deprecated-declarations"
+        
+        p4a apk \
+          --private . \
+          --package=org.cyberpunk.neolauncherar \
+          --name="NeoLauncherAR" \
+          --version=1.0 \
+          --bootstrap=sdl2 \
+          --requirements=python3,kivy==2.3.0,kivymd==1.1.1,pyjnius \
+          --arch=arm64-v8a \
+          --android-api=34 \
+          --ndk-api=21 \
+          --permission=CAMERA \
+          --permission=BODY_SENSORS \
+          --manifest manifest.xml \
+          --release
+
+    - name: Subir APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Final
+        path: "*.apk"
