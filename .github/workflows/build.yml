@@ -1,7 +1,7 @@
 name: Compilar APK con Buildozer
 
 on:
-  workflow_dispatch: # Activa el botón manual en la web
+  workflow_dispatch:
 
 jobs:
   build:
@@ -23,13 +23,13 @@ jobs:
         sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev python3-pip python3-setuptools
         pip3 install --user --upgrade buildozer Cython==0.29.33 virtualenv
 
+    - name: Aceptar Licencias de Android SDK Automáticamente
+      run: |
+        mkdir -p $HOME/.android
+        touch $HOME/.android/repositories.cfg
+        yes | sdkmanager --licenses || true
+
     - name: Compilar APK en modo Debug
       run: |
         export PATH=$PATH:$HOME/.local/bin
         buildozer android debug
-
-    - name: Subir APK terminada como Artefacto Web
-      uses: actions/upload-artifact@v4
-      with:
-        name: Launcher-AR-Debug
-        path: bin/*.apk
