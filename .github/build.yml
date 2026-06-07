@@ -1,0 +1,36 @@
+name: Compilar APK con Buildozer
+
+on:
+  workflow_dispatch: # Permite iniciar la compilaciÃ³n manualmente con un botÃ³n web
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Descargar el cÃ³digo fuente
+      uses: actions/checkout@v3
+
+    - name: Configurar Entorno Java JDK
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias del sistema Linux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev python3-pip python3-setuptools
+        sudo apt-get install -y opencv-doc libgstreamer1.0-dev gstreamer1.0-plugins-base gstreamer1.0-plugins-good
+        pip3 install --user --upgrade buildozer Cython==0.29.33 virtualenv
+
+    - name: Compilar APK en modo Debug
+      run: |
+        export PATH=$PATH:$HOME/.local/bin
+        buildozer android debug
+
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v3
+      with:
+        name: Launcher-AR-Debug
+        path: bin/*.apk
