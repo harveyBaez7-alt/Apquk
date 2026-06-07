@@ -30,31 +30,34 @@ jobs:
     - name: Instalar herramientas de Python locales
       run: |
         python3 -m pip install --upgrade pip
-        # Instalamos todo en el entorno global de la máquina virtual
-        python3 -m pip install wheel setuptools Cython==0.29.33 python-for-android pillow
+        python3 -m pip install wheel setuptools Cython==0.29.33 python-for-android
 
     - name: Compilar APK Directamente con P4A (Entorno GitHub Nativo)
       env:
-        # Forzamos la desactivación total del aislamiento a nivel global del sistema
         PIP_NO_BUILD_ISOLATION: "false"
         P4A_NO_BUILD_ISOLATION: "1"
       run: |
         export ANDROID_SDK_ROOT=$ANDROID_HOME
         export ANDROID_NDK_ROOT=$ANDROID_NDK_LATEST_HOME
         export P4A_hostpython=$(which python3)
-        
-        # Agregamos la bandera interna de pip para asegurar que herede a Cython
         export PIP_ARGS="--no-build-isolation"
         
+        # EL CAMBIO CLAVE: Removimos 'pillow' de los requirements
         p4a apk \
           --private . \
           --package=org.cyberpunk.neolauncherar \
           --name="NeoLauncherAR" \
           --version=1.0 \
           --bootstrap=sdl2 \
-          --requirements=python3,kivy==2.3.0,kivymd==1.1.1,pyjnius,pillow \
+          --requirements=python3,kivy==2.3.0,kivymd==1.1.1,pyjnius \
           --arch=arm64-v8a \
           --android-api=34 \
           --permission=CAMERA \
           --permission=BODY_SENSORS \
           --release
+
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Nativo
+        path: "*.apk"
