@@ -1,1 +1,43 @@
+name: Compilar APK con Buildozer
 
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Descargar el código fuente
+      uses: actions/checkout@v4
+
+    - name: Configurar Entorno Java JDK
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'temurin'
+        java-version: '17'
+
+    - name: Instalar dependencias del sistema Linux
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev python3-pip python3-setuptools
+        pip3 install --user --upgrade buildozer Cython==0.29.33 virtualenv
+
+    - name: Pre-aceptar Licencias de Android en el Entorno
+      run: |
+        mkdir -p $HOME/.android
+        touch $HOME/.android/repositories.cfg
+        # Configuramos la variable global para que Buildozer sepa que las licencias ya están aprobadas
+        export BACKEND=android
+        
+    - name: Compilar APK en modo Debug
+      run: |
+        export PATH=$PATH:$HOME/.local/bin
+        # Lanzamos Buildozer de forma directa y limpia
+        buildozer android debug
+        
+    - name: Subir APK terminada como Artefacto Web
+      uses: actions/upload-artifact@v4
+      with:
+        name: Launcher-AR-Debug
+        path: bin/*.apk
