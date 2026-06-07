@@ -1,4 +1,4 @@
-name: Compilar APK con Python-for-Android
+name: Compilar APK con Python-for-Android Local
 
 on:
   workflow_dispatch:
@@ -11,6 +11,7 @@ jobs:
     - name: Descargar el código fuente
       uses: actions/checkout@v4
 
+    # Forzamos Python 3.11 en la máquina virtual
     - name: Configurar Python Estable
       uses: actions/setup-python@v5
       with:
@@ -27,18 +28,23 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config zlib1g-dev libjpeg-dev libffi-dev libssl-dev
 
-    - name: Instalar herramientas de Python
+    - name: Instalar herramientas de Python locales
       run: |
         python3 -m pip install --upgrade pip
         python3 -m pip install wheel setuptools Cython==0.29.33 python-for-android pillow
 
-    - name: Compilar APK Directamente con P4A (Sin Buildozer)
+    - name: Compilar APK Directamente con P4A (Entorno GitHub Nativo)
       run: |
-        # Usamos el SDK y NDK limpios que ya están en el sistema de GitHub
+        # 1. Forzamos a P4A a usar el SDK y NDK que YA están instalados en GitHub
         export ANDROID_SDK_ROOT=$ANDROID_HOME
         export ANDROID_NDK_ROOT=$ANDROID_NDK_LATEST_HOME
         
-        # Corregido: 'python3' va a secas para evitar que el compilador se confunda
+        # 2. EL CANDADO DEFINITIVO: Obligamos a P4A a usar el ejecutable de Python 3.11 del sistema.
+        # Esto evita que cree entornos temporales '/tmp' buscando Python 3.14.
+        export P4A_hostpython=$(which python3)
+        export PIP_NO_BUILD_ISOLATION=0
+        
+        # Ejecutamos la compilación limpia
         p4a apk \
           --private . \
           --package=org.cyberpunk.neolauncherar \
